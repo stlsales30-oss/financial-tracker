@@ -4,7 +4,7 @@ import { useState, useRef } from "react";
 import { db } from "@/lib/db";
 
 export default function SettingsPage() {
-  const settings = useLiveQuery(() => db.settings.toFirst()) ?? null;
+  const settings = useLiveQuery(() => db.settings.toArray().then(arr => arr[0] ?? null)) ?? null;
   const categories = useLiveQuery(() => db.categories.toArray()) ?? [];
   const entries = useLiveQuery(() => db.entries.toArray()) ?? [];
 

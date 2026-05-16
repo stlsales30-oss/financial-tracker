@@ -7,7 +7,7 @@ export default function DashboardPage() {
   const router = useRouter();
   const categories = useLiveQuery(() => db.categories.toArray()) ?? [];
   const entries = useLiveQuery(() => db.entries.toArray()) ?? [];
-  const settings = useLiveQuery(() => db.settings.toFirst()) ?? null;
+  const settings = useLiveQuery(() => db.settings.toArray().then(arr => arr[0] ?? null)) ?? null;
   const totalBudget = settings?.totalBudget ?? 5000;
   const now = new Date();
   const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
