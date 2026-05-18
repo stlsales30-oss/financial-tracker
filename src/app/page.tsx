@@ -2,9 +2,13 @@
 import { useLiveQuery } from "dexie-react-hooks";
 import { useRouter } from "next/navigation";
 import { db } from "@/lib/db";
+import { useTheme } from "@/components/ThemeProvider";
 
 export default function DashboardPage() {
   const router = useRouter();
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
+
   const categories = useLiveQuery(() => db.categories.toArray()) ?? [];
   const entries = useLiveQuery(() => db.entries.toArray()) ?? [];
   const settings = useLiveQuery(() => db.settings.toArray().then(arr => arr[0] ?? null)) ?? null;
@@ -34,139 +38,143 @@ export default function DashboardPage() {
   const recentEntries = [...entries].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5);
   const catMap = Object.fromEntries(categories.map((c) => [c.id, c]));
 
+  // Theme colors
+  const card = isDark ? "#1e293b" : "#ffffff";
+  const cardBorder = isDark ? "#334155" : "#e2e8f0";
+  const textMain = isDark ? "#f1f5f9" : "#0f172a";
+  const textSub = isDark ? "#94a3b8" : "#64748b";
+  const trackBg = isDark ? "#334155" : "#e2e8f0";
+
   return (
-    <div className="min-h-screen bg-[#0f1117] text-slate-200 pb-10">
-      <div className="flex justify-between items-center mb-6">
+    <div style={{ minHeight: "100vh", paddingBottom: "40px" }}>
+
+      {/* Header */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
         <div>
-          <h1 className="text-xl font-semibold text-white">Finance Tracker</h1>
-          <p className="text-sm text-slate-500 mt-0.5">{monthLabel} — Monthly Overview</p>
+          <h1 style={{ fontSize: "20px", fontWeight: "600", color: textMain }}>Finance Tracker</h1>
+          <p style={{ fontSize: "13px", color: textSub, marginTop: "2px" }}>{monthLabel} — Monthly Overview</p>
         </div>
-        <div className="flex gap-2">
-          <button onClick={() => router.push("/add-entry")} className="px-4 py-2 rounded-full bg-[#1e293b] border border-slate-700 text-slate-400 text-sm hover:text-white hover:bg-slate-700 transition">+ New Expense</button>
-          <button onClick={() => router.push("/add-entry")} className="px-4 py-2 rounded-full bg-indigo-600 border border-indigo-500 text-white text-sm hover:bg-indigo-500 transition">+ New Income</button>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-        <div className="bg-[#1e293b] border border-slate-700 rounded-xl p-4">
-          <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">Total Budget</p>
-          <p className="text-2xl font-semibold text-white">{fmt(totalBudget)}</p>
-          <p className="text-xs text-slate-500 mt-1">{monthLabel}</p>
-        </div>
-        <div className="bg-[#1e293b] border border-slate-700 rounded-xl p-4">
-          <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">Total Spent</p>
-          <p className="text-2xl font-semibold text-red-400">{fmt(totalSpent)}</p>
-          <p className="text-xs text-slate-500 mt-1">{overallPct}% of budget used</p>
-        </div>
-        <div className="bg-[#1e293b] border border-slate-700 rounded-xl p-4">
-          <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">Remaining</p>
-          <p className={`text-2xl font-semibold ${remaining >= 0 ? "text-green-400" : "text-red-400"}`}>{fmt(remaining)}</p>
-          <p className="text-xs text-slate-500 mt-1">{remaining >= 0 ? `${100 - overallPct}% left` : "Over budget"}</p>
-        </div>
-        <div className="bg-[#1e293b] border border-slate-700 rounded-xl p-4">
-          <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">Income</p>
-          <p className="text-2xl font-semibold text-green-400">{fmt(totalIncome)}</p>
-          <p className="text-xs text-slate-500 mt-1">{monthEntries.filter(e => e.type === "income").length} entries</p>
+        <div style={{ display: "flex", gap: "8px" }}>
+          <button onClick={() => router.push("/add-entry")} style={{ padding: "8px 16px", borderRadius: "999px", border: `1px solid ${cardBorder}`, background: card, color: textSub, fontSize: "13px", cursor: "pointer" }}>+ New Expense</button>
+          <button onClick={() => router.push("/add-entry")} style={{ padding: "8px 16px", borderRadius: "999px", background: "#6366f1", border: "none", color: "#fff", fontSize: "13px", cursor: "pointer", fontWeight: "500" }}>+ New Income</button>
         </div>
       </div>
 
-      <div className="bg-[#1e293b] border border-slate-700 rounded-xl p-4 mb-6">
-        <div className="flex justify-between items-center mb-2">
-          <p className="text-sm text-slate-400">Overall Budget Progress</p>
-          <p className="text-sm text-white font-medium">{overallPct}%</p>
-        </div>
-        <div className="h-3 bg-slate-700 rounded-full overflow-hidden">
-          <div className="h-full rounded-full transition-all duration-500" style={{ width: `${overallPct}%`, backgroundColor: overallPct >= 90 ? "#f87171" : overallPct >= 70 ? "#f59e0b" : "#6366f1" }} />
-        </div>
-        <div className="flex justify-between mt-1.5 text-xs text-slate-500">
-          <span>{fmt(totalSpent)} spent</span>
-          <span>{fmt(totalBudget)} total</span>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          <div className="flex justify-between items-center mb-3">
-            <p className="text-xs text-slate-500 uppercase tracking-wide">Budget Categories</p>
-            <button onClick={() => router.push("/categories")} className="text-xs text-indigo-400 hover:text-indigo-300 transition">Manage →</button>
+      {/* Metric Cards */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: "12px", marginBottom: "20px" }}>
+        {[
+          { label: "Total Budget", value: fmt(totalBudget), color: textMain, sub: monthLabel },
+          { label: "Total Spent", value: fmt(totalSpent), color: "#f87171", sub: `${overallPct}% of budget used` },
+          { label: "Remaining", value: fmt(remaining), color: remaining >= 0 ? "#4ade80" : "#f87171", sub: remaining >= 0 ? `${100 - overallPct}% left` : "Over budget" },
+          { label: "Income", value: fmt(totalIncome), color: "#4ade80", sub: `${monthEntries.filter(e => e.type === "income").length} entries` },
+        ].map((m) => (
+          <div key={m.label} style={{ background: card, border: `1px solid ${cardBorder}`, borderRadius: "12px", padding: "16px" }}>
+            <p style={{ fontSize: "11px", color: textSub, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "6px" }}>{m.label}</p>
+            <p style={{ fontSize: "24px", fontWeight: "600", color: m.color }}>{m.value}</p>
+            <p style={{ fontSize: "12px", color: textSub, marginTop: "4px" }}>{m.sub}</p>
           </div>
-          <div className="flex flex-col gap-3">
-            {catSpend.length === 0 && (
-              <div className="bg-[#1e293b] border border-slate-700 rounded-xl p-6 text-center">
-                <p className="text-slate-500 text-sm">No categories yet.</p>
-                <button onClick={() => router.push("/categories")} className="mt-2 text-xs text-indigo-400 hover:text-indigo-300">Add categories →</button>
-              </div>
-            )}
-            {catSpend.map((cat) => (
-              <div key={cat.id} className="bg-[#1e293b] border border-slate-700 rounded-xl p-4">
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-sm text-slate-200 flex items-center gap-2"><span>{cat.icon}</span>{cat.name}</span>
-                  <span className="text-sm text-slate-400">
-                    <span className={cat.over ? "text-red-400 font-semibold" : "text-white font-semibold"}>{fmt(cat.spent)}</span>
-                    {" / "}{fmt(cat.budget)}
-                  </span>
-                </div>
-                <div className="h-1.5 bg-slate-700 rounded-full overflow-hidden">
-                  <div className="h-full rounded-full transition-all duration-500" style={{ width: `${cat.pct}%`, backgroundColor: cat.over ? "#f87171" : cat.color }} />
-                </div>
-                <div className="flex justify-between mt-1.5 text-xs text-slate-500">
-                  <span>{cat.pct}% used</span>
-                  <span>{cat.over ? `${fmt(cat.spent - cat.budget)} over` : `${fmt(cat.budget - cat.spent)} left`}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+        ))}
+      </div>
 
-        <div className="flex flex-col gap-5">
+      {/* Overall Progress Bar */}
+      <div style={{ background: card, border: `1px solid ${cardBorder}`, borderRadius: "12px", padding: "16px", marginBottom: "20px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
+          <p style={{ fontSize: "14px", color: textSub }}>Overall Budget Progress</p>
+          <p style={{ fontSize: "14px", color: textMain, fontWeight: "500" }}>{overallPct}%</p>
+        </div>
+        <div style={{ height: "10px", background: trackBg, borderRadius: "999px", overflow: "hidden" }}>
+          <div style={{ height: "100%", borderRadius: "999px", width: `${overallPct}%`, backgroundColor: overallPct >= 90 ? "#f87171" : overallPct >= 70 ? "#f59e0b" : "#6366f1", transition: "width 0.5s" }} />
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between", marginTop: "6px" }}>
+          <p style={{ fontSize: "12px", color: textSub }}>{fmt(totalSpent)} spent</p>
+          <p style={{ fontSize: "12px", color: textSub }}>{fmt(totalBudget)} total</p>
+        </div>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "24px" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "24px" }}>
+
+          {/* Budget Categories */}
           <div>
-            <div className="flex justify-between items-center mb-3">
-              <p className="text-xs text-slate-500 uppercase tracking-wide">Recent Entries</p>
-              <button onClick={() => router.push("/entries")} className="text-xs text-indigo-400 hover:text-indigo-300 transition">View all →</button>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "12px" }}>
+              <p style={{ fontSize: "11px", color: textSub, textTransform: "uppercase", letterSpacing: "0.05em" }}>Budget Categories</p>
+              <button onClick={() => router.push("/categories")} style={{ fontSize: "12px", color: "#6366f1", background: "none", border: "none", cursor: "pointer" }}>Manage →</button>
             </div>
-            {recentEntries.length === 0 ? (
-              <div className="bg-[#1e293b] border border-slate-700 rounded-xl p-5 text-center">
-                <p className="text-slate-500 text-sm">No entries yet.</p>
-                <button onClick={() => router.push("/add-entry")} className="mt-2 text-xs text-indigo-400 hover:text-indigo-300">Add first entry →</button>
-              </div>
-            ) : (
-              <div className="flex flex-col gap-2">
-                {recentEntries.map((entry) => {
-                  const cat = catMap[entry.categoryId];
-                  return (
-                    <div key={entry.id} className="bg-[#1e293b] border border-slate-700 rounded-xl p-3 flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="text-base">{cat?.icon ?? "📦"}</span>
-                        <div>
-                          <p className="text-xs font-medium text-white">{cat?.name ?? "Unknown"}</p>
-                          <p className="text-xs text-slate-500">{entry.date}</p>
-                        </div>
-                      </div>
-                      <span className={`text-xs font-semibold ${entry.type === "income" ? "text-green-400" : "text-red-400"}`}>
-                        {entry.type === "income" ? "+" : "-"}${(entry.amount / 100).toFixed(2)}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+              {catSpend.map((cat) => (
+                <div key={cat.id} style={{ background: card, border: `1px solid ${cardBorder}`, borderRadius: "12px", padding: "14px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
+                    <span style={{ fontSize: "14px", color: textMain, display: "flex", alignItems: "center", gap: "8px" }}>
+                      <span>{cat.icon}</span>{cat.name}
+                    </span>
+                    <span style={{ fontSize: "13px", color: textSub }}>
+                      <span style={{ color: cat.over ? "#f87171" : textMain, fontWeight: "600" }}>{fmt(cat.spent)}</span>
+                      {" / "}{fmt(cat.budget)}
+                    </span>
+                  </div>
+                  <div style={{ height: "6px", background: trackBg, borderRadius: "999px", overflow: "hidden" }}>
+                    <div style={{ height: "100%", borderRadius: "999px", width: `${cat.pct}%`, backgroundColor: cat.over ? "#f87171" : cat.color, transition: "width 0.5s" }} />
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginTop: "6px" }}>
+                    <p style={{ fontSize: "11px", color: textSub }}>{cat.pct}% used</p>
+                    <p style={{ fontSize: "11px", color: textSub }}>{cat.over ? `${fmt(cat.spent - cat.budget)} over` : `${fmt(cat.budget - cat.spent)} left`}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
 
-          <div className="bg-[#1e293b] border border-slate-700 rounded-xl p-4">
-            <p className="text-xs text-slate-500 uppercase tracking-wide mb-3">Quick Stats</p>
-            <div className="flex flex-col gap-2">
-              <div className="flex justify-between text-sm"><span className="text-slate-400">Total entries</span><span className="text-white font-medium">{monthEntries.length}</span></div>
-              <div className="flex justify-between text-sm"><span className="text-slate-400">Categories</span><span className="text-white font-medium">{categories.length}</span></div>
-              <div className="flex justify-between text-sm">
-                <span className="text-slate-400">Net this month</span>
-                <span className={`font-medium ${totalIncome - totalSpent >= 0 ? "text-green-400" : "text-red-400"}`}>{fmt(totalIncome - totalSpent)}</span>
+          {/* Right Column */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+
+            {/* Recent Entries */}
+            <div>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "12px" }}>
+                <p style={{ fontSize: "11px", color: textSub, textTransform: "uppercase", letterSpacing: "0.05em" }}>Recent Entries</p>
+                <button onClick={() => router.push("/entries")} style={{ fontSize: "12px", color: "#6366f1", background: "none", border: "none", cursor: "pointer" }}>View all →</button>
               </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-slate-400">Avg per entry</span>
-                <span className="text-white font-medium">
-                  {monthEntries.filter(e => e.type === "expense").length > 0 ? fmt(totalSpent / monthEntries.filter(e => e.type === "expense").length) : "$0.00"}
-                </span>
-              </div>
+              {recentEntries.length === 0 ? (
+                <div style={{ background: card, border: `1px solid ${cardBorder}`, borderRadius: "12px", padding: "20px", textAlign: "center" }}>
+                  <p style={{ fontSize: "13px", color: textSub }}>No entries yet.</p>
+                  <button onClick={() => router.push("/add-entry")} style={{ marginTop: "8px", fontSize: "12px", color: "#6366f1", background: "none", border: "none", cursor: "pointer" }}>Add first entry →</button>
+                </div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                  {recentEntries.map((entry) => {
+                    const cat = catMap[entry.categoryId];
+                    return (
+                      <div key={entry.id} style={{ background: card, border: `1px solid ${cardBorder}`, borderRadius: "12px", padding: "10px 12px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                          <span>{cat?.icon ?? "📦"}</span>
+                          <div>
+                            <p style={{ fontSize: "12px", fontWeight: "500", color: textMain }}>{cat?.name ?? "Unknown"}</p>
+                            <p style={{ fontSize: "11px", color: textSub }}>{entry.date}</p>
+                          </div>
+                        </div>
+                        <span style={{ fontSize: "12px", fontWeight: "600", color: entry.type === "income" ? "#4ade80" : "#f87171" }}>
+                          {entry.type === "income" ? "+" : "-"}${(entry.amount / 100).toFixed(2)}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Quick Stats */}
+            <div style={{ background: card, border: `1px solid ${cardBorder}`, borderRadius: "12px", padding: "16px" }}>
+              <p style={{ fontSize: "11px", color: textSub, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "12px" }}>Quick Stats</p>
+              {[
+                { label: "Total entries", value: String(monthEntries.length) },
+                { label: "Categories", value: String(categories.length) },
+                { label: "Net this month", value: fmt(totalIncome - totalSpent), color: totalIncome - totalSpent >= 0 ? "#4ade80" : "#f87171" },
+                { label: "Avg per entry", value: monthEntries.filter(e => e.type === "expense").length > 0 ? fmt(totalSpent / monthEntries.filter(e => e.type === "expense").length) : "$0.00" },
+              ].map((s) => (
+                <div key={s.label} style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
+                  <span style={{ fontSize: "13px", color: textSub }}>{s.label}</span>
+                  <span style={{ fontSize: "13px", fontWeight: "500", color: s.color ?? textMain }}>{s.value}</span>
+                </div>
+              ))}
             </div>
           </div>
         </div>

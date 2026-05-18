@@ -2,185 +2,98 @@
 import { useLiveQuery } from "dexie-react-hooks";
 import { useState } from "react";
 import { db, type Category } from "@/lib/db";
+import { useTheme } from "@/components/ThemeProvider";
 
-const COLORS = [
-  "#6366f1", "#22c55e", "#f59e0b", "#3b82f6",
-  "#ec4899", "#14b8a6", "#f87171", "#a78bfa",
-];
-
-const ICONS = ["🏠", "🛒", "⚡", "💼", "🚗", "📦", "🍔", "🏥", "🎮", "✈️", "📱", "👕"];
-
+const COLORS = ["#6366f1","#22c55e","#f59e0b","#3b82f6","#ec4899","#14b8a6","#f87171","#a78bfa"];
+const ICONS = ["🏠","🛒","⚡","💼","🚗","📦","🍔","🏥","🎮","✈️","📱","👕"];
 const empty = { name: "", icon: "📦", color: "#6366f1", budget: 0 };
 
 export default function CategoriesPage() {
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
   const categories = useLiveQuery(() => db.categories.toArray()) ?? [];
   const [form, setForm] = useState<Omit<Category, "id">>(empty);
   const [editId, setEditId] = useState<number | null>(null);
   const [showForm, setShowForm] = useState(false);
 
+  const card = isDark ? "#1e293b" : "#ffffff";
+  const cardBorder = isDark ? "#334155" : "#e2e8f0";
+  const textMain = isDark ? "#f1f5f9" : "#0f172a";
+  const textSub = isDark ? "#94a3b8" : "#64748b";
+  const inputBg = isDark ? "#0f1117" : "#f8fafc";
+
   async function handleSave() {
     if (!form.name.trim()) return;
-    if (editId !== null) {
-      await db.categories.update(editId, form);
-      setEditId(null);
-    } else {
-      await db.categories.add(form);
-    }
-    setForm(empty);
-    setShowForm(false);
+    if (editId !== null) { await db.categories.update(editId, form); setEditId(null); }
+    else { await db.categories.add(form); }
+    setForm(empty); setShowForm(false);
   }
+  async function handleDelete(id: number) { if (confirm("Delete this category?")) await db.categories.delete(id); }
+  function handleEdit(cat: Category) { setForm({ name: cat.name, icon: cat.icon, color: cat.color, budget: cat.budget }); setEditId(cat.id!); setShowForm(true); }
+  function handleCancel() { setForm(empty); setEditId(null); setShowForm(false); }
 
-  async function handleDelete(id: number) {
-    if (confirm("Delete this category?")) {
-      await db.categories.delete(id);
-    }
-  }
-
-  function handleEdit(cat: Category) {
-    setForm({ name: cat.name, icon: cat.icon, color: cat.color, budget: cat.budget });
-    setEditId(cat.id!);
-    setShowForm(true);
-  }
-
-  function handleCancel() {
-    setForm(empty);
-    setEditId(null);
-    setShowForm(false);
-  }
+  const inputStyle = { width: "100%", background: inputBg, border: `1px solid ${cardBorder}`, borderRadius: "8px", padding: "10px 12px", fontSize: "14px", color: textMain, outline: "none", boxSizing: "border-box" as const };
 
   return (
-    <div className="max-w-3xl mx-auto">
-      <div className="flex justify-between items-center mb-6">
+    <div style={{ maxWidth: "680px", margin: "0 auto" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
         <div>
-          <h1 className="text-xl font-semibold text-white">Categories</h1>
-          <p className="text-sm text-slate-500 mt-0.5">{categories.length} categories</p>
+          <h1 style={{ fontSize: "20px", fontWeight: "600", color: textMain }}>Categories</h1>
+          <p style={{ fontSize: "13px", color: textSub, marginTop: "2px" }}>{categories.length} categories</p>
         </div>
-        {!showForm && (
-          <button
-            onClick={() => setShowForm(true)}
-            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm rounded-lg transition"
-          >
-            + Add Category
-          </button>
-        )}
+        {!showForm && <button onClick={() => setShowForm(true)} style={{ padding: "8px 16px", background: "#6366f1", border: "none", borderRadius: "8px", color: "#fff", fontSize: "14px", cursor: "pointer" }}>+ Add Category</button>}
       </div>
 
       {showForm && (
-        <div className="bg-[#1e293b] border border-slate-700 rounded-xl p-5 mb-6">
-          <h2 className="text-sm font-semibold text-white mb-4">
-            {editId !== null ? "Edit Category" : "New Category"}
-          </h2>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <div style={{ background: card, border: `1px solid ${cardBorder}`, borderRadius: "16px", padding: "24px", marginBottom: "20px" }}>
+          <h2 style={{ fontSize: "14px", fontWeight: "600", color: textMain, marginBottom: "16px" }}>{editId !== null ? "Edit Category" : "New Category"}</h2>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "16px" }}>
             <div>
-              <label className="text-xs text-slate-400 mb-1 block">Name</label>
-              <input
-                type="text"
-                placeholder="e.g. Groceries"
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                className="w-full bg-[#0f1117] border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
-              />
+              <label style={{ fontSize: "12px", color: textSub, display: "block", marginBottom: "6px" }}>Name</label>
+              <input type="text" placeholder="e.g. Groceries" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} style={inputStyle} />
             </div>
             <div>
-              <label className="text-xs text-slate-400 mb-1 block">Monthly Budget ($)</label>
-              <input
-                type="number"
-                placeholder="0"
-                value={form.budget || ""}
-                onChange={(e) => setForm({ ...form, budget: Number(e.target.value) })}
-                className="w-full bg-[#0f1117] border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
-              />
+              <label style={{ fontSize: "12px", color: textSub, display: "block", marginBottom: "6px" }}>Monthly Budget ($)</label>
+              <input type="number" placeholder="0" value={form.budget || ""} onChange={(e) => setForm({ ...form, budget: Number(e.target.value) })} style={inputStyle} />
             </div>
           </div>
-
-          <div className="mb-4">
-            <label className="text-xs text-slate-400 mb-2 block">Icon</label>
-            <div className="flex gap-2 flex-wrap">
+          <div style={{ marginBottom: "16px" }}>
+            <label style={{ fontSize: "12px", color: textSub, display: "block", marginBottom: "8px" }}>Icon</label>
+            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
               {ICONS.map((icon) => (
-                <button
-                  key={icon}
-                  onClick={() => setForm({ ...form, icon })}
-                  className={`w-9 h-9 rounded-lg text-lg flex items-center justify-center transition ${
-                    form.icon === icon
-                      ? "bg-indigo-600 border-2 border-indigo-400"
-                      : "bg-[#0f1117] border border-slate-700 hover:border-slate-500"
-                  }`}
-                >
-                  {icon}
-                </button>
+                <button key={icon} onClick={() => setForm({ ...form, icon })} style={{ width: "36px", height: "36px", borderRadius: "8px", fontSize: "18px", border: `2px solid ${form.icon === icon ? "#6366f1" : cardBorder}`, background: form.icon === icon ? "rgba(99,102,241,0.15)" : inputBg, cursor: "pointer" }}>{icon}</button>
               ))}
             </div>
           </div>
-
-          <div className="mb-5">
-            <label className="text-xs text-slate-400 mb-2 block">Color</label>
-            <div className="flex gap-2 flex-wrap">
+          <div style={{ marginBottom: "20px" }}>
+            <label style={{ fontSize: "12px", color: textSub, display: "block", marginBottom: "8px" }}>Color</label>
+            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
               {COLORS.map((color) => (
-                <button
-                  key={color}
-                  onClick={() => setForm({ ...form, color })}
-                  className={`w-8 h-8 rounded-full border-2 transition ${
-                    form.color === color ? "border-white scale-110" : "border-transparent"
-                  }`}
-                  style={{ backgroundColor: color }}
-                />
+                <button key={color} onClick={() => setForm({ ...form, color })} style={{ width: "32px", height: "32px", borderRadius: "50%", backgroundColor: color, border: `3px solid ${form.color === color ? textMain : "transparent"}`, cursor: "pointer" }} />
               ))}
             </div>
           </div>
-
-          <div className="flex gap-3">
-            <button
-              onClick={handleSave}
-              className="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm rounded-lg transition"
-            >
-              {editId !== null ? "Save Changes" : "Add Category"}
-            </button>
-            <button
-              onClick={handleCancel}
-              className="px-5 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 text-sm rounded-lg transition"
-            >
-              Cancel
-            </button>
+          <div style={{ display: "flex", gap: "12px" }}>
+            <button onClick={handleSave} style={{ padding: "10px 20px", background: "#6366f1", border: "none", borderRadius: "8px", color: "#fff", fontSize: "14px", cursor: "pointer" }}>{editId !== null ? "Save Changes" : "Add Category"}</button>
+            <button onClick={handleCancel} style={{ padding: "10px 20px", background: "transparent", border: `1px solid ${cardBorder}`, borderRadius: "8px", color: textSub, fontSize: "14px", cursor: "pointer" }}>Cancel</button>
           </div>
         </div>
       )}
 
-      <div className="flex flex-col gap-3">
+      <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
         {categories.map((cat) => (
-          <div
-            key={cat.id}
-            className="bg-[#1e293b] border border-slate-700 rounded-xl p-4 flex items-center justify-between"
-          >
-            <div className="flex items-center gap-3">
-              <div
-                className="w-10 h-10 rounded-xl flex items-center justify-center text-xl"
-                style={{ backgroundColor: cat.color + "22", border: `1.5px solid ${cat.color}44` }}
-              >
-                {cat.icon}
-              </div>
+          <div key={cat.id} style={{ background: card, border: `1px solid ${cardBorder}`, borderRadius: "12px", padding: "14px 16px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              <div style={{ width: "40px", height: "40px", borderRadius: "10px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "20px", backgroundColor: cat.color + "22", border: `1.5px solid ${cat.color}44` }}>{cat.icon}</div>
               <div>
-                <p className="text-sm font-medium text-white">{cat.name}</p>
-                <p className="text-xs text-slate-500">Budget: ${cat.budget.toLocaleString()} / month</p>
+                <p style={{ fontSize: "14px", fontWeight: "500", color: textMain }}>{cat.name}</p>
+                <p style={{ fontSize: "12px", color: textSub }}>Budget: ${cat.budget.toLocaleString()} / month</p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <div
-                className="w-3 h-3 rounded-full"
-                style={{ backgroundColor: cat.color }}
-              />
-              <button
-                onClick={() => handleEdit(cat)}
-                className="px-3 py-1.5 text-xs text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-lg transition"
-              >
-                Edit
-              </button>
-              <button
-                onClick={() => handleDelete(cat.id!)}
-                className="px-3 py-1.5 text-xs text-red-400 hover:text-white bg-red-900/20 hover:bg-red-900/40 rounded-lg transition"
-              >
-                Delete
-              </button>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <div style={{ width: "10px", height: "10px", borderRadius: "50%", backgroundColor: cat.color }} />
+              <button onClick={() => handleEdit(cat)} style={{ padding: "6px 12px", fontSize: "12px", color: textSub, background: "transparent", border: `1px solid ${cardBorder}`, borderRadius: "6px", cursor: "pointer" }}>Edit</button>
+              <button onClick={() => handleDelete(cat.id!)} style={{ padding: "6px 12px", fontSize: "12px", color: "#f87171", background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: "6px", cursor: "pointer" }}>Delete</button>
             </div>
           </div>
         ))}
